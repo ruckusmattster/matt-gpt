@@ -1,0 +1,18 @@
+# private / unscrubbed data — never commit
+data/raw/
+data/*.local.txt
+
+# model weights (download from Hugging Face instead, see README)
+weights/
+checkpoints/
+*.pth
+*.pt
+
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+flagged/
+.gradio/
