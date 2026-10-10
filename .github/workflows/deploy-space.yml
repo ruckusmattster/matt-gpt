@@ -1,0 +1,59 @@
+name: Deploy to Hugging Face Space
+
+# Uploads app.py, the mattgpt package and weights/mattgpt.pth to
+# huggingface.co/spaces/mattyhew/mattgpt whenever they change on main.
+#
+# One-time setup: create a *write* token at https://huggingface.co/settings/tokens
+# and add it to this repo as the Actions secret HF_TOKEN
+# (Settings -> Secrets and variables -> Actions -> New repository secret).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - app.py
+      - mattgpt/**
+      - weights/mattgpt.pth
+      - scripts/build_space.py
+      - .github/workflows/deploy-space.yml
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-space
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build Space folder
+        run: python scripts/build_space.py build/space
+
+      - name: Upload to Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          if [ -z "$HF_TOKEN" ]; then
+            echo "::warning::HF_TOKEN secret is not set; skipping deploy. See the comment at the top of this workflow."
+            exit 0
+          fi
+          pip install --quiet "huggingface_hub>=0.25"
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+
+          HfApi(token=os.environ["HF_TOKEN"]).upload_folder(
+              repo_id="mattyhew/mattgpt",
+              repo_type="space",
+              folder_path="build/space",
+              commit_message=f"Deploy {os.environ['GITHUB_SHA'][:7]} from GitHub",
+              # replace the old app and remove the superseded story-model weights
+              delete_patterns=["*.py", "mattgpt/**", "weights/**", "weights.pth", "requirements.txt"],
+          )
+          EOF

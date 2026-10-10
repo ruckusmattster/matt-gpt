@@ -1,8 +1,7 @@
 # Dataset: `messages.txt`
 
 My own Discord messages, exported one message per line, oldest-to-newest order
-not guaranteed. Also published on Kaggle as
-[`matthewweinberger/long-discord`](https://www.kaggle.com/datasets/matthewweinberger/long-discord).
+not guaranteed.
 
 | | |
 |---|---|

@@ -2,10 +2,11 @@
 data/raw/
 data/*.local.txt
 
-# model weights (download from Hugging Face instead, see README)
-weights/
-checkpoints/
+# model weights: only the small published inference file is tracked
 *.pth
+weights/*
+!weights/mattgpt.pth
+checkpoints/
 *.pt
 
 # python
