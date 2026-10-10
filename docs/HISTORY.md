@@ -44,4 +44,24 @@ now the scrubbed version. The raw export lives only in git-ignored `data/raw/`.
 
 **Finding.** The deployed checkpoint's 212-character vocabulary doesn't match
 the Discord data's 534 characters, so it was trained on a different (story)
-corpus. Training on the Discord data is the open next step.
+corpus.
+
+## v2.1 — trained on the Discord data (Oct 2026)
+
+- Trained the default config on the scrubbed `data/messages.txt` on a Kaggle
+  GPU (18,000-step schedule, ~0.34 s per step). Validation loss fell fastest in the first
+  1,000 steps and bottomed out at **1.44 nats/char at step 9,000**; after that
+  the model overfit, and `train.py` kept the step-9,000 weights.
+- Samples now sound like the source: 3D-printing, flashlight and Stable
+  Diffusion vocabulary, short lowercase lines, without coherence beyond about
+  a sentence.
+- Added `scripts/export_inference.py` (92 MB training checkpoint → 15 MB fp16
+  inference file) and committed the result as `weights/mattgpt.pth`, so the
+  repo works straight after cloning.
+- Moved the app from Gradio 4.44 to 5.50: 4.44 crashes with current
+  FastAPI/Starlette ("unhashable type: 'dict'") and needs `audioop`, which
+  Python 3.13 removed.
+- Deployment is now a GitHub Action that uploads a clean snapshot (app,
+  package, weights) to the Space on each merge, replacing the hand-edited
+  Space files and the 88 MB story-model `weights.pth`. Tests run in CI.
+- Replaced a real Discord user ID that had been used as test data.

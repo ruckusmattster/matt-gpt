@@ -1,7 +1,10 @@
 """Generate text from a MattGPT checkpoint.
 
-    python generate.py --ckpt weights/weights.pth --prompt "then a man named marcus walked in"
-    python generate.py --download --prompt "once upon a time"   # fetch weights from Hugging Face first
+    python generate.py --prompt "anyone know a good upscaler"
+    python generate.py --ckpt checkpoints/mattgpt.pth --prompt "lol" --num-samples 3
+
+With no --ckpt it uses weights/mattgpt.pth (the released Discord model),
+downloading it from GitHub if it isn't there.
 """
 
 from __future__ import annotations
@@ -12,33 +15,23 @@ import sys
 import torch
 
 from mattgpt import load_checkpoint
-
-HF_REPO = "mattyhew/mattgpt"
-HF_FILE = "weights.pth"
-
-
-def download_weights() -> str:
-    from huggingface_hub import hf_hub_download
-
-    return hf_hub_download(repo_id=HF_REPO, repo_type="space", filename=HF_FILE)
+from mattgpt.weights import default_weights
 
 
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--ckpt", default="weights/weights.pth")
-    p.add_argument("--download", action="store_true", help=f"download {HF_FILE} from the {HF_REPO} Space")
+    p.add_argument("--ckpt", help="checkpoint path (default: weights/mattgpt.pth)")
     p.add_argument("--prompt", default="\n")
     p.add_argument("--max-new-tokens", type=int, default=400)
-    p.add_argument("--temperature", type=float, default=1.0)
-    p.add_argument("--top-k", type=int, default=50)
+    p.add_argument("--temperature", type=float, default=0.8)
+    p.add_argument("--top-k", type=int, default=40)
     p.add_argument("--top-p", type=float, default=1.0)
     p.add_argument("--num-samples", type=int, default=1)
     p.add_argument("--seed", type=int)
     p.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = p.parse_args()
 
-    ckpt_path = download_weights() if args.download else args.ckpt
-    model, tok, _ = load_checkpoint(ckpt_path, device=args.device)
+    model, tok, _ = load_checkpoint(args.ckpt or default_weights(), device=args.device)
 
     dropped = tok.unknown_chars(args.prompt)
     if dropped:

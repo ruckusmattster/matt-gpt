@@ -64,6 +64,11 @@ def load_checkpoint(path, device: str = "cpu"):
         )
 
     model = GPTLanguageModel(cfg)
-    model.load_state_dict(state)
+    # Inference exports omit the constant causal-mask buffers and may store fp16
+    # weights; load_state_dict copies (and so casts) into the fp32 parameters.
+    missing, unexpected = model.load_state_dict(state, strict=False)
+    missing = [k for k in missing if not k.endswith(".tril")]
+    if missing or unexpected:
+        raise RuntimeError(f"checkpoint mismatch; missing={missing} unexpected={unexpected}")
     model.to(device).eval()
     return model, tokenizer, ckpt

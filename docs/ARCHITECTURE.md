@@ -17,19 +17,19 @@ built from scratch in PyTorch following Andrej Karpathy's
         LayerNorm ──► Linear (384×V) ──► logits over V characters
 ```
 
-## Hyperparameters (released checkpoint)
+## Hyperparameters (released Discord model)
 
 | | value |
 |---|---|
-| Vocabulary `V` | 212 characters (legacy checkpoint) / 534 (Discord data) |
+| Vocabulary `V` | 534 characters (the 2024 story model used 212) |
 | Context length | 128 characters |
 | Embedding dim | 384 |
 | Layers × heads | 4 × 4 (head size 96) |
 | MLP expansion | 4× (1536) |
 | Dropout | 0.2 |
-| Parameters | 7.31 M (V=212) / 7.55 M (V=534) |
+| Parameters | 7.55 M (7.31 M for the V=212 story model) |
 | Optimiser | Adam-family (AdamW in `train.py`), lr 1e-3, batch 128 |
-| Iterations | 18,000 (≈ 295 M characters seen) |
+| Iterations | 18,000 (≈ 295 M characters seen); best val loss at 9,000 |
 
 ## Things worth knowing
 
@@ -55,6 +55,9 @@ tensor by token id along the batch dimension, which crashed whenever top-p < 1;
 it's fixed here (filter mask is scattered back into vocabulary order) and
 covered by a test.
 
-**Checkpoint size.** `weights.pth` is 88.8 MB for 7.3 M parameters because it
-also contains the AdamW optimiser state (two moment tensors per parameter):
-7.3 M × 4 bytes × 3 ≈ 88 MB. An inference-only export would be ~29 MB.
+**Checkpoint size.** A training checkpoint also holds the AdamW optimiser
+state (two moment tensors per parameter), so it is ~3× the model: 92 MB for
+7.55 M parameters. `scripts/export_inference.py` drops the optimiser state and
+the constant causal-mask buffers and stores weights as float16, giving the
+15 MB `weights/mattgpt.pth`. `load_checkpoint()` casts back to float32 on load;
+validation loss is unchanged to five decimal places.

@@ -84,3 +84,40 @@ def test_legacy_checkpoint_format_loads(tmp_path):
     m2, tok, _ = load_checkpoint(path)
     assert tok.chars == LEGACY_VOCAB
     assert m2.cfg.n_layer == 4
+
+
+def test_inference_export_roundtrip(tmp_path):
+    import importlib.util
+    from pathlib import Path
+
+    spec = importlib.util.spec_from_file_location(
+        "export_inference", Path(__file__).parents[1] / "scripts" / "export_inference.py")
+    exp = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(exp)
+
+    tok = CharTokenizer.from_text("abcdefghijklmnopqrst")
+    model = GPTLanguageModel(tiny_cfg(tok.vocab_size)).eval()
+    src, dst = tmp_path / "train.pth", tmp_path / "infer.pth"
+    save_checkpoint(src, model, tok, torch.optim.AdamW(model.parameters()), iteration=3)
+    out = exp.export(src, dst)
+
+    assert "optimizerState" not in out
+    assert not any(k.endswith(".tril") for k in out["modelState"])
+    assert all(v.dtype == torch.float16 for v in out["modelState"].values() if v.is_floating_point())
+
+    m2, tok2, _ = load_checkpoint(dst)
+    assert next(m2.parameters()).dtype == torch.float32
+    x = torch.randint(0, tok.vocab_size, (2, 16))
+    assert torch.allclose(model(x)[0], m2(x)[0], atol=1e-2)
+
+
+def test_released_weights_load_if_present():
+    import pytest
+    from mattgpt.weights import DEFAULT_WEIGHTS
+
+    if not DEFAULT_WEIGHTS.exists():
+        pytest.skip("weights/mattgpt.pth not present")
+    model, tok, _ = load_checkpoint(DEFAULT_WEIGHTS)
+    assert tok.vocab_size == model.cfg.vocab_size == 534
+    out = model.generate(torch.tensor([tok.encode("lol")]), 20, top_k=40)
+    assert out.shape == (1, 23)

@@ -17,7 +17,7 @@ def test_email_phone_postcode():
 
 
 def test_discord_ids():
-    out = run("hey <@190711020006670336> <@&123456789012345678> <#123456789012345678> <:waow:1017853838516035725>")
+    out = run("hey <@123456789012345678> <@&123456789012345678> <#123456789012345678> <:waow:876543210987654321>")
     assert out == "hey @user @role #channel :waow:"
 
 
